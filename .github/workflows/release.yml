@@ -1,4 +1,10 @@
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build and upload assets for
+        required: true
+        type: string
   release:
     types:
       - created
@@ -16,6 +22,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
 
       - name: Cache Version
         run: .github/.deploy/bump.sh
@@ -33,6 +42,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/download-artifact@v2
         with:
@@ -73,6 +84,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/download-artifact@v2
         with:
@@ -121,6 +134,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/download-artifact@v2
         with:
@@ -175,6 +190,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/download-artifact@v2
         with:
@@ -231,6 +248,6 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: outputs/*
-          tag: ${{ github.ref }}
+          tag: ${{ inputs.tag || github.ref }}
           overwrite: true
           file_glob: true
