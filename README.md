@@ -22,11 +22,19 @@ You may need to close and reopen your terminal after installation. Alternatively
 
 ## Usage
 
-`plz` uses OpenAI's [GPT-5.4 mini](https://developers.openai.com/api/docs/models/gpt-5.4-mini) model. To use it, you'll need an API key from [the OpenAI API dashboard](https://platform.openai.com/api-keys), saved as `OPENAI_API_KEY` (you can also save it in your bash/zsh profile for persistence between sessions).
+`plz` uses OpenAI's [GPT-5.4 mini](https://developers.openai.com/api/docs/models/gpt-5.4-mini) model by default. To use it, you'll need an API key from [the OpenAI API dashboard](https://platform.openai.com/api-keys), saved as `OPENAI_API_KEY` (you can also save it in your bash/zsh profile for persistence between sessions).
 
 ```bash
 export OPENAI_API_KEY='sk-XXXXXXXX'
 ```
+
+To use a different model, set `OPENAI_MODEL` (you can also save it in your bash/zsh profile):
+
+```bash
+export OPENAI_MODEL='gpt-4.1-mini'
+```
+
+If `OPENAI_MODEL` is unset, empty, or whitespace-only, `plz` uses `gpt-5.4-mini`. Leading and trailing whitespace is ignored. The selected model must support the existing Chat Completions endpoint and request parameters.
 
 Once you have configured your environment, run `plz` followed by whatever it is that you want to do (`plz show me all options for the plz cli`).
 

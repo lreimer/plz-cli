@@ -38,7 +38,7 @@ fn main() {
             "max_completion_tokens": 1000,
             "presence_penalty": 0,
             "frequency_penalty": 0,
-            "model": "gpt-5.4-mini",
+            "model": config.model,
             "messages": [{
                 "role": "user",
                 "content": build_prompt(&cli.prompt.join(" ")),

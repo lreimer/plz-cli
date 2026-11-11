@@ -4,6 +4,7 @@ use std::{env, io::Write, process::exit};
 pub struct Config {
     pub api_key: String,
     pub api_base: String,
+    pub model: String,
     pub shell: String,
 }
 
@@ -15,11 +16,13 @@ impl Config {
         });
         let api_base = env::var("OPENAI_API_BASE")
             .unwrap_or_else(|_| String::from("https://api.openai.com/v1"));
+        let model = resolve_model(env::var("OPENAI_MODEL").ok().as_deref());
         let shell = env::var("SHELL").unwrap_or_else(|_| String::new());
 
         Self {
             api_key,
             api_base,
+            model,
             shell,
         }
     }
@@ -40,5 +43,35 @@ impl Config {
                         exit(1);
                     });
             });
+    }
+}
+
+fn resolve_model(model: Option<&str>) -> String {
+    model
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("gpt-5.4-mini")
+        .to_owned()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_model;
+
+    #[test]
+    fn uses_configured_model() {
+        assert_eq!(resolve_model(Some(" custom-model ")), "custom-model");
+    }
+
+    #[test]
+    fn defaults_when_model_is_unset() {
+        assert_eq!(resolve_model(None), "gpt-5.4-mini");
+    }
+
+    #[test]
+    fn defaults_when_model_is_blank() {
+        for model in ["", " ", "\t\n"] {
+            assert_eq!(resolve_model(Some(model)), "gpt-5.4-mini");
+        }
     }
 }
