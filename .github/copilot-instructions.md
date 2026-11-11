@@ -14,7 +14,7 @@ The formatting and Clippy commands match `.github/workflows/lint.yml`. CI uses t
 
 This is a small Rust CLI with its argument parsing and command-generation workflow in `src/main.rs`, and environment-based settings and shell-history handling in `src/config.rs`.
 
-`main` parses the prompt and `--force` option with Clap, builds a Bash-oriented prompt with a platform hint, and calls the OpenAI completions endpoint through a blocking Reqwest client. It displays the generated Bash with `bat`, asks for confirmation unless `--force` was given, then records approved commands in the detected Bash/Zsh history file and executes them with `bash -c`.
+`main` parses the prompt and `--force` option with Clap, builds a Bash-oriented prompt with a platform hint, and calls the OpenAI chat completions endpoint through a blocking Reqwest client. It displays the generated Bash with `bat`, asks for confirmation unless `--force` was given, then records approved commands in the detected Bash/Zsh history file and executes them with `bash -c`.
 
 `Config::new` requires `OPENAI_API_KEY`; `OPENAI_API_BASE` overrides the default API base URL, and `SHELL` determines whether command history is written. Keep API/configuration handling in `config.rs` and the CLI flow in `main.rs`.
 

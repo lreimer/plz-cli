@@ -1,8 +1,8 @@
 [package]
 name = "plz"
 license = "MIT"
-edition = "2021"
-version = "0.1.0"
+edition = "2024"
+version = "0.2.0"
 readme = "README.md"
 categories = ["command-line-utilities"]
 homepage = "https://github.com/m1guelpf/plz-cli"
@@ -12,9 +12,9 @@ description = "Generate bash scripts from the command line, using Codex"
 
 [dependencies]
 question = "0.2.2"
-spinners = "4.1.0"
-serde_json = { version = "1.0.89", default-features = false }
-clap = { version = "4.0.29", features = ["derive"] }
-reqwest = { version = "0.11.13", default-features = false, features = ["json", "blocking", "rustls-tls"] }
-bat = { version = "0.22.1", default-features = false, features = ["regex-onig"] }
-colored = "2.0.0"
+spinners = "4.2.0"
+serde_json = { version = "1.0.154", default-features = false }
+clap = { version = "4.6.7", features = ["derive"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "blocking", "rustls"] }
+bat = { version = "0.26.1", default-features = false, features = ["regex-onig"] }
+colored = "3.1.1"

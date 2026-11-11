@@ -29,19 +29,20 @@ fn main() {
 
     let client = Client::new();
     let mut spinner = Spinner::new(Spinners::BouncingBar, "Generating your command...".into());
-    let api_addr = format!("{}/completions", config.api_base);
+    let api_addr = format!("{}/chat/completions", config.api_base);
     let response = client
         .post(api_addr)
         .json(&json!({
             "top_p": 1,
-            "stop": "```",
             "temperature": 0,
-            "suffix": "\n```",
-            "max_tokens": 1000,
+            "max_completion_tokens": 1000,
             "presence_penalty": 0,
             "frequency_penalty": 0,
-            "model": "gpt-3.5-turbo-instruct",
-            "prompt": build_prompt(&cli.prompt.join(" ")),
+            "model": "gpt-5.4-mini",
+            "messages": [{
+                "role": "user",
+                "content": build_prompt(&cli.prompt.join(" ")),
+            }],
         }))
         .header("Authorization", format!("Bearer {}", config.api_key))
         .send()
@@ -66,7 +67,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    let code = response.json::<serde_json::Value>().unwrap()["choices"][0]["text"]
+    let code = response.json::<serde_json::Value>().unwrap()["choices"][0]["message"]["content"]
         .as_str()
         .unwrap()
         .trim()
@@ -144,5 +145,8 @@ fn build_prompt(prompt: &str) -> String {
         ""
     };
 
-    format!("{prompt}{os_hint}:\n```bash\n#!/bin/bash\n")
+    format!(
+        "Write a Bash script for this request{os_hint}: {prompt}\n\
+         Return only the script, without Markdown fences or explanation. Start with #!/bin/bash.\n"
+    )
 }

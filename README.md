@@ -22,7 +22,7 @@ You may need to close and reopen your terminal after installation. Alternatively
 
 ## Usage
 
-`plz` uses [GPT-3](https://beta.openai.com/). To use it, you'll need to grab an API key from [your dashboard](https://beta.openai.com/), and save it to `OPENAI_API_KEY` as follows (you can also save it in your bash/zsh profile for persistance between sessions).
+`plz` uses OpenAI's [GPT-5.4 mini](https://developers.openai.com/api/docs/models/gpt-5.4-mini) model. To use it, you'll need an API key from [the OpenAI API dashboard](https://platform.openai.com/api-keys), saved as `OPENAI_API_KEY` (you can also save it in your bash/zsh profile for persistence between sessions).
 
 ```bash
 export OPENAI_API_KEY='sk-XXXXXXXX'
