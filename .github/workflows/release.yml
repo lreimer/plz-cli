@@ -165,7 +165,8 @@ jobs:
       - name: Install gcc-musl compiler
         shell: bash
         run: |
-          sudo apt-get install musl-tools
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
           musl-gcc --version || true
 
       - name: Build
@@ -184,7 +185,7 @@ jobs:
 
   macos:
     name: Build for Mac
-    runs-on: macos-11
+    runs-on: macos-latest
     needs: [version_bump]
 
     steps:
