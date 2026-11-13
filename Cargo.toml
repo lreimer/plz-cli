@@ -2,7 +2,7 @@
 name = "plz"
 license = "MIT"
 edition = "2024"
-version = "0.3.0"
+version = "0.4.0"
 readme = "README.md"
 categories = ["command-line-utilities"]
 homepage = "https://github.com/m1guelpf/plz-cli"

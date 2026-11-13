@@ -5,12 +5,11 @@ use clap::Parser;
 use colored::Colorize;
 use config::Config;
 use question::{Answer, Question};
-use reqwest::blocking::Client;
-use serde_json::json;
 use spinners::{Spinner, Spinners};
 use std::process::Command;
 
 mod config;
+mod llm;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -25,53 +24,17 @@ struct Cli {
 
 fn main() {
     let cli = Cli::parse();
-    let config = Config::new();
+    let config = Config::new().unwrap_or_else(|error| {
+        eprintln!("{}", error.red());
+        std::process::exit(1);
+    });
 
-    let client = Client::new();
     let mut spinner = Spinner::new(Spinners::BouncingBar, "Generating your command...".into());
-    let api_addr = format!("{}/chat/completions", config.api_base);
-    let response = client
-        .post(api_addr)
-        .json(&json!({
-            "top_p": 1,
-            "temperature": 0,
-            "max_completion_tokens": 1000,
-            "presence_penalty": 0,
-            "frequency_penalty": 0,
-            "model": config.model,
-            "messages": [{
-                "role": "user",
-                "content": build_prompt(&cli.prompt.join(" ")),
-            }],
-        }))
-        .header("Authorization", format!("Bearer {}", config.api_key))
-        .send()
-        .unwrap();
-
-    let status_code = response.status();
-    if status_code.is_client_error() {
-        let response_body = response.json::<serde_json::Value>().unwrap();
-        let error_message = response_body["error"]["message"].as_str().unwrap();
-        spinner.stop_and_persist(
-            "✖".red().to_string().as_str(),
-            format!("API error: \"{error_message}\"").red().to_string(),
-        );
-        std::process::exit(1);
-    } else if status_code.is_server_error() {
-        spinner.stop_and_persist(
-            "✖".red().to_string().as_str(),
-            format!("OpenAI is currently experiencing problems. Status code: {status_code}")
-                .red()
-                .to_string(),
-        );
-        std::process::exit(1);
-    }
-
-    let code = response.json::<serde_json::Value>().unwrap()["choices"][0]["message"]["content"]
-        .as_str()
-        .unwrap()
-        .trim()
-        .to_string();
+    let code =
+        llm::generate(&config, &build_prompt(&cli.prompt.join(" "))).unwrap_or_else(|error| {
+            spinner.stop_and_persist("✖".red().to_string().as_str(), error.red().to_string());
+            std::process::exit(1);
+        });
 
     spinner.stop_and_persist(
         "✔".green().to_string().as_str(),

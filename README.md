@@ -22,6 +22,11 @@ You may need to close and reopen your terminal after installation. Alternatively
 
 ## Usage
 
+Set `PLZ_PROVIDER` to `openai` (the default) or `google` (`gemini` is also accepted).
+Provider names are case-insensitive. An unset or blank value selects OpenAI.
+
+### OpenAI
+
 `plz` uses OpenAI's [GPT-5.4 mini](https://developers.openai.com/api/docs/models/gpt-5.4-mini) model by default. To use it, you'll need an API key from [the OpenAI API dashboard](https://platform.openai.com/api-keys), saved as `OPENAI_API_KEY` (you can also save it in your bash/zsh profile for persistence between sessions).
 
 ```bash
@@ -35,6 +40,30 @@ export OPENAI_MODEL='gpt-4.1-mini'
 ```
 
 If `OPENAI_MODEL` is unset, empty, or whitespace-only, `plz` uses `gpt-5.4-mini`. Leading and trailing whitespace is ignored. The selected model must support the existing Chat Completions endpoint and request parameters.
+
+Set `OPENAI_API_BASE` to override the default API base URL, `https://api.openai.com/v1`.
+
+### Google Gemini
+
+Get an API key from [Google AI Studio](https://aistudio.google.com/apikey), then configure:
+
+```bash
+export PLZ_PROVIDER='google'
+export GEMINI_API_KEY='your-api-key'
+export GEMINI_MODEL='gemini-2.5-flash'
+```
+
+`GEMINI_MODEL` is optional and defaults to `gemini-2.5-flash`. `GOOGLE_API_KEY`
+is accepted as a fallback when `GEMINI_API_KEY` is unset or blank. No OpenAI key is
+required when using Google.
+
+Set `GEMINI_API_BASE` to override the default API base URL,
+`https://generativelanguage.googleapis.com/v1beta`. Google uses the native
+`models/{model}:generateContent` endpoint; model names must support that endpoint.
+Model and API base settings ignore surrounding whitespace and use their defaults
+when unset or blank. Only the selected provider's settings are used.
+
+### Generating commands
 
 Once you have configured your environment, run `plz` followed by whatever it is that you want to do (`plz show me all options for the plz cli`).
 
