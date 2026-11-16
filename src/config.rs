@@ -4,6 +4,7 @@ use std::{env, io::Write, process::exit};
 pub enum Provider {
     OpenAi,
     Google,
+    Ollama,
 }
 
 impl Provider {
@@ -16,8 +17,9 @@ impl Provider {
         {
             "" | "openai" => Ok(Self::OpenAi),
             "google" | "gemini" => Ok(Self::Google),
+            "ollama" => Ok(Self::Ollama),
             value => Err(format!(
-                "Unsupported PLZ_PROVIDER: {value}. Choose openai or google."
+                "Unsupported PLZ_PROVIDER: {value}. Choose openai, google or ollama."
             )),
         }
     }
@@ -26,6 +28,7 @@ impl Provider {
         match self {
             Self::OpenAi => "OpenAI",
             Self::Google => "Google Gemini",
+            Self::Ollama => "Ollama",
         }
     }
 }
@@ -60,22 +63,44 @@ impl Config {
                 "https://generativelanguage.googleapis.com/v1beta",
                 "gemini-2.5-flash",
             ),
+            Provider::Ollama => (
+                "",
+                "OLLAMA_API_BASE",
+                "OLLAMA_MODEL",
+                "http://localhost:11434",
+                "qwen2.5-coder",
+            ),
         };
-        let api_key = get(key_var)
-            .filter(|key| !key.trim().is_empty())
-            .or_else(|| {
-                (provider == Provider::Google)
-                    .then(|| get("GOOGLE_API_KEY"))
-                    .flatten()
-                    .filter(|key| !key.trim().is_empty())
-            })
-            .ok_or_else(|| {
-                format!(
-                    "{} requires an API key. Please set {key_var}.",
-                    provider.name()
-                )
-            })?;
-        let api_base = resolve_setting(get(base_var).as_deref(), default_base);
+        let api_key = if provider == Provider::Ollama {
+            String::new()
+        } else {
+            get(key_var)
+                .filter(|key| !key.trim().is_empty())
+                .or_else(|| {
+                    (provider == Provider::Google)
+                        .then(|| get("GOOGLE_API_KEY"))
+                        .flatten()
+                        .filter(|key| !key.trim().is_empty())
+                })
+                .ok_or_else(|| {
+                    format!(
+                        "{} requires an API key. Please set {key_var}.",
+                        provider.name()
+                    )
+                })?
+        };
+        let mut api_base = resolve_setting(get(base_var).as_deref(), default_base);
+        if provider == Provider::Ollama {
+            // OLLAMA_HOST is the standard variable and is often given without a scheme.
+            if let Some(host) = get("OLLAMA_HOST").filter(|host| !host.trim().is_empty())
+                && get(base_var).is_none_or(|base| base.trim().is_empty())
+            {
+                api_base = host.trim().to_owned();
+            }
+            if !api_base.contains("://") {
+                api_base = format!("http://{api_base}");
+            }
+        }
         let model = resolve_setting(get(model_var).as_deref(), default_model);
         let shell = get("SHELL").unwrap_or_default();
 
@@ -181,6 +206,34 @@ mod tests {
         assert_eq!(config.api_key, "google-key");
         assert_eq!(config.model, "custom-gemini");
         assert_eq!(config.api_base, "http://localhost:8080/v1beta");
+        Ok(())
+    }
+
+    #[test]
+    fn ollama_needs_no_key_and_has_local_defaults() -> Result<(), String> {
+        let config = config(&[("PLZ_PROVIDER", "Ollama")])?;
+        assert_eq!(config.provider, Provider::Ollama);
+        assert_eq!(config.api_key, "");
+        assert_eq!(config.model, "qwen2.5-coder");
+        assert_eq!(config.api_base, "http://localhost:11434");
+        Ok(())
+    }
+
+    #[test]
+    fn ollama_host_and_overrides() -> Result<(), String> {
+        let host = config(&[
+            ("PLZ_PROVIDER", "ollama"),
+            ("OLLAMA_HOST", "127.0.0.1:1234"),
+            ("OLLAMA_MODEL", " llama3.2 "),
+        ])?;
+        assert_eq!(host.api_base, "http://127.0.0.1:1234");
+        assert_eq!(host.model, "llama3.2");
+        let base = config(&[
+            ("PLZ_PROVIDER", "ollama"),
+            ("OLLAMA_HOST", "ignored:1"),
+            ("OLLAMA_API_BASE", "https://example.com"),
+        ])?;
+        assert_eq!(base.api_base, "https://example.com");
         Ok(())
     }
 
