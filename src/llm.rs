@@ -5,7 +5,17 @@ use serde_json::{Value, json};
 pub fn generate(config: &Config, prompt: &str) -> Result<String, String> {
     let response = build_request(&Client::new(), config, prompt)
         .send()
-        .map_err(|error| format!("Could not contact {}: {error}", config.provider.name()))?;
+        .map_err(|error| {
+            let hint = if config.provider == Provider::Ollama {
+                " Is Ollama running?"
+            } else {
+                ""
+            };
+            format!(
+                "Could not contact {}: {error}.{hint}",
+                config.provider.name()
+            )
+        })?;
     let status = response.status();
     let body = response.json::<Value>().map_err(|_| {
         format!(
@@ -15,11 +25,19 @@ pub fn generate(config: &Config, prompt: &str) -> Result<String, String> {
     })?;
 
     if !status.is_success() {
+        // Ollama reports errors as a plain string rather than an object.
         let message = body["error"]["message"]
             .as_str()
+            .or_else(|| body["error"].as_str())
             .unwrap_or("No error details provided");
+        let hint =
+            if config.provider == Provider::Ollama && status == reqwest::StatusCode::NOT_FOUND {
+                format!(" Try `ollama pull {}`.", config.model)
+            } else {
+                String::new()
+            };
         return Err(format!(
-            "{} API error ({status}): {message}",
+            "{} API error ({status}): {message}{hint}",
             config.provider.name()
         ));
     }
@@ -49,6 +67,12 @@ fn build_request(client: &Client, config: &Config, prompt: &str) -> RequestBuild
                 "contents": [{"role": "user", "parts": [{"text": prompt}]}],
                 "generationConfig": {"temperature": 0},
             })),
+        Provider::Ollama => client.post(format!("{base}/api/chat")).json(&json!({
+            "model": config.model,
+            "stream": false,
+            "options": {"temperature": 0},
+            "messages": [{"role": "user", "content": prompt}],
+        })),
     }
 }
 
@@ -58,6 +82,15 @@ fn extract_code(provider: Provider, body: &Value) -> Result<String, String> {
             .as_str()
             .unwrap_or_default()
             .to_owned(),
+        Provider::Ollama => {
+            if body["done_reason"].as_str() == Some("length") {
+                return Err("Ollama did not finish generating code: length".to_owned());
+            }
+            body["message"]["content"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned()
+        }
         Provider::Google => {
             let candidate = &body["candidates"][0];
             if let Some(reason) = candidate["finishReason"].as_str()
@@ -95,7 +128,7 @@ mod tests {
 
     #[test]
     fn builds_provider_specific_requests() -> Result<(), Box<dyn std::error::Error>> {
-        for provider in [Provider::OpenAi, Provider::Google] {
+        for provider in [Provider::OpenAi, Provider::Google, Provider::Ollama] {
             let config = Config {
                 provider,
                 api_key: "test-key".to_owned(),
@@ -128,6 +161,13 @@ mod tests {
                     assert_eq!(body["contents"][0]["parts"][0]["text"], "test prompt");
                     assert_eq!(body["generationConfig"]["temperature"], 0);
                 }
+                Provider::Ollama => {
+                    assert_eq!(request.url().path(), "/v1/api/chat");
+                    assert!(!request.headers().contains_key("authorization"));
+                    assert_eq!(body["model"], "test-model");
+                    assert_eq!(body["stream"], false);
+                    assert_eq!(body["messages"][0]["content"], "test prompt");
+                }
             }
         }
         Ok(())
@@ -140,6 +180,16 @@ mod tests {
             extract_code(Provider::OpenAi, &body)?,
             "#!/bin/bash\necho ok"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn extracts_ollama_code_and_rejects_truncation() -> Result<(), String> {
+        let body = json!({"message": {"content": " echo ok\n"}, "done_reason": "stop"});
+        assert_eq!(extract_code(Provider::Ollama, &body)?, "echo ok");
+        let truncated = json!({"message": {"content": "echo"}, "done_reason": "length"});
+        assert!(extract_code(Provider::Ollama, &truncated).is_err());
+        assert!(extract_code(Provider::Ollama, &json!({})).is_err());
         Ok(())
     }
 
@@ -162,7 +212,7 @@ mod tests {
 
     #[test]
     fn rejects_missing_empty_and_incomplete_code() {
-        for provider in [Provider::OpenAi, Provider::Google] {
+        for provider in [Provider::OpenAi, Provider::Google, Provider::Ollama] {
             assert!(extract_code(provider, &json!({})).is_err());
         }
         assert!(

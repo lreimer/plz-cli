@@ -22,7 +22,7 @@ You may need to close and reopen your terminal after installation. Alternatively
 
 ## Usage
 
-Set `PLZ_PROVIDER` to `openai` (the default) or `google` (`gemini` is also accepted).
+Set `PLZ_PROVIDER` to `openai` (the default), `google` (`gemini` is also accepted) or `ollama`.
 Provider names are case-insensitive. An unset or blank value selects OpenAI.
 
 ### OpenAI
@@ -62,6 +62,21 @@ Set `GEMINI_API_BASE` to override the default API base URL,
 `models/{model}:generateContent` endpoint; model names must support that endpoint.
 Model and API base settings ignore surrounding whitespace and use their defaults
 when unset or blank. Only the selected provider's settings are used.
+
+### Ollama (local models)
+
+Install [Ollama](https://ollama.com), pull a model, then configure:
+
+```bash
+ollama pull qwen2.5-coder
+export PLZ_PROVIDER='ollama'
+export OLLAMA_MODEL='qwen2.5-coder'
+```
+
+No API key is needed. `OLLAMA_MODEL` is optional and defaults to `qwen2.5-coder`.
+`plz` talks to Ollama's native `/api/chat` endpoint at `http://localhost:11434`.
+Set `OLLAMA_HOST` (the scheme defaults to `http://` and the port to `11434` when omitted) or
+`OLLAMA_API_BASE` to use another server; `OLLAMA_API_BASE` takes precedence.
 
 ### Generating commands
 
