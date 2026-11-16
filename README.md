@@ -75,7 +75,7 @@ export OLLAMA_MODEL='qwen2.5-coder'
 
 No API key is needed. `OLLAMA_MODEL` is optional and defaults to `qwen2.5-coder`.
 `plz` talks to Ollama's native `/api/chat` endpoint at `http://localhost:11434`.
-Set `OLLAMA_HOST` (a scheme-less value such as `127.0.0.1:11434` is accepted) or
+Set `OLLAMA_HOST` (the scheme defaults to `http://` and the port to `11434` when omitted) or
 `OLLAMA_API_BASE` to use another server; `OLLAMA_API_BASE` takes precedence.
 
 ### Generating commands

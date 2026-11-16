@@ -91,13 +91,13 @@ impl Config {
         };
         let mut api_base = resolve_setting(get(base_var).as_deref(), default_base);
         if provider == Provider::Ollama {
-            // OLLAMA_HOST is the standard variable and is often given without a scheme.
+            // OLLAMA_HOST is the standard variable and, like in Ollama itself, may omit the
+            // scheme and port.
             if let Some(host) = get("OLLAMA_HOST").filter(|host| !host.trim().is_empty())
                 && get(base_var).is_none_or(|base| base.trim().is_empty())
             {
-                api_base = host.trim().to_owned();
-            }
-            if !api_base.contains("://") {
+                api_base = normalize_ollama_host(host.trim());
+            } else if !api_base.contains("://") {
                 api_base = format!("http://{api_base}");
             }
         }
@@ -129,6 +129,20 @@ impl Config {
                         exit(1);
                     });
             });
+    }
+}
+
+fn normalize_ollama_host(host: &str) -> String {
+    if host.contains("://") {
+        return host.to_owned();
+    }
+    let has_port = host
+        .rsplit_once(':')
+        .is_some_and(|(_, port)| !port.is_empty() && port.bytes().all(|b| b.is_ascii_digit()));
+    if has_port {
+        format!("http://{host}")
+    } else {
+        format!("http://{host}:11434")
     }
 }
 
@@ -228,6 +242,15 @@ mod tests {
         ])?;
         assert_eq!(host.api_base, "http://127.0.0.1:1234");
         assert_eq!(host.model, "llama3.2");
+        for (value, expected) in [
+            ("localhost", "http://localhost:11434"),
+            ("[::1]", "http://[::1]:11434"),
+            ("[::1]:5000", "http://[::1]:5000"),
+            ("https://example.com", "https://example.com"),
+        ] {
+            let config = config(&[("PLZ_PROVIDER", "ollama"), ("OLLAMA_HOST", value)])?;
+            assert_eq!(config.api_base, expected);
+        }
         let base = config(&[
             ("PLZ_PROVIDER", "ollama"),
             ("OLLAMA_HOST", "ignored:1"),
